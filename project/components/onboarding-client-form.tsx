@@ -93,6 +93,16 @@ export default function OnboardingClientForm({ initialPhone, patientAction, doct
       <h2 className="text-xl font-bold text-slate-800 dark:text-zinc-100">Doctor Professional Profile</h2>
       <button type="button" onClick={() => setRole(null)} className="text-xs text-blue-500 hover:underline">← Go Back</button>
 
+      <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">First Name</label>
+            <input required type="text" name="firstName" className="w-full p-2 border rounded-md bg-transparent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">Last Name</label>
+            <input required type="text" name="lastName" className="w-full p-2 border rounded-md bg-transparent" />
+          </div>
+      </div>
       <div>
         <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">Medical Specialization</label>
         <input required type="text" name="specialization" placeholder="e.g. Cardiologist, Pediatrician, General Physician" className="w-full p-2 border rounded-md bg-transparent" />

@@ -2,6 +2,9 @@
 
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
+import { db } from '@/lib/db';
+import { patients, doctors } from '@/lib/db/schema';
+import { patientOnboardingSchema, doctorOnboardingSchema } from '@/lib/validations';
 
 export async function completePatientOnboarding(formData: FormData) {
   const { userId } = await auth();
@@ -9,34 +12,46 @@ export async function completePatientOnboarding(formData: FormData) {
 
   const client = await clerkClient();
 
-  // Extract Patient Inputs
-  const firstName = formData.get('firstName') as string;
-  const lastName = formData.get('lastName') as string;
-  const birthday = formData.get('birthday') as string;
-  const weight = formData.get('weight') as string;
-  const height = formData.get('height') as string;
-  const phone = formData.get('phone') as string;
-  const medicalHistory = formData.get('medicalHistory') as string;
+  // Fetch user from Clerk to get their default profile picture
+  const clerkUser = await client.users.getUser(userId);
+  const profilePicture = clerkUser.imageUrl || null;
 
-  // Update Clerk's system data so it matches their input profile
-  await client.users.updateUser(userId, {
-    firstName: firstName || '',
-    lastName: lastName || '',
+  // Transform FormData into a plain object and validate with Zod
+  const rawData = Object.fromEntries(formData.entries());
+  const result = patientOnboardingSchema.safeParse(rawData);
+
+  if (!result.success) {
+    const errorMessages = result.error.flatten().fieldErrors;
+    throw new Error(`Validation failed: ${JSON.stringify(errorMessages)}`);
+  }
+
+  const { firstName, lastName, birthday, weight, height, phone, basicMedicalHistory } = result.data;
+
+  // Insert into db
+  await db.insert(patients).values({
+    id: userId,
+    profilePicture,
+    firstName,
+    lastName,
+    birthday,
+    weight: weight.toString(),
+    height: height.toString(),
+    phone,
+    basicMedicalHistory: basicMedicalHistory || null,
   });
 
-  // Save medical properties securely to Clerk Metadata
+  // Update Clerk Core Instance Properties
+  await client.users.updateUser(userId, {
+    firstName: firstName,
+    lastName: lastName,
+  });
+
+  // Update Clerk Metadata
   await client.users.updateUserMetadata(userId, {
     publicMetadata: {
       role: 'patient',
       onboardingComplete: true,
-      doctorVerified: true, // Bypass verification check
-    },
-    privateMetadata: {
-      birthday,
-      weight,
-      height,
-      phone,
-      medicalHistory
+      doctorVerified: true, 
     }
   });
 
@@ -48,21 +63,38 @@ export async function completeDoctorOnboarding(formData: FormData) {
   if (!userId) throw new Error("Unauthorized");
 
   const client = await clerkClient();
+  const clerkUser = await client.users.getUser(userId);
+  const profilePicture = clerkUser.imageUrl || null;
 
-  // Extract Doctor Inputs
-  const specialization = formData.get('specialization') as string;
-  const bio = formData.get('bio') as string;
+  // Transform FormData into an object and validate with Zod
+  const rawData = Object.fromEntries(formData.entries());
+  const result = doctorOnboardingSchema.safeParse(rawData);
 
-  // Save details to Clerk Metadata
+  if (!result.success) {
+    const errorMessages = result.error.flatten().fieldErrors;
+    throw new Error(`Validation failed: ${JSON.stringify(errorMessages)}`);
+  }
+
+  const { firstName, lastName, specialization, bio } = result.data;
+
+  // Insert into db
+  await db.insert(doctors).values({
+    id: userId,
+    profilePicture,
+    firstName,
+    lastName,
+    specialization,
+    bio,
+    isVerified: false, // Default state until admin reviews credentials
+  });
+
+  // Update Clerk Metadata
   await client.users.updateUserMetadata(userId, {
     publicMetadata: {
       role: 'doctor',
       onboardingComplete: true,
-      doctorVerified: false, 
+      doctorVerified: false,
       specialization,
-    },
-    privateMetadata: {
-      bio
     }
   });
 
