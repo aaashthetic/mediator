@@ -102,7 +102,7 @@ export default function HeroSection() {
                                     <Show when="signed-out">
                                         <SignUpButton mode="modal" forceRedirectUrl="/blogs">
                                             <button className="relative z-10 cursor-pointer hover:bg-background dark:hover:border-t-border bg-muted group mx-auto flex w-fit items-center gap-4 rounded-full border p-1 pl-4 shadow-md shadow-zinc-950/5 transition-colors duration-300 dark:border-t-white/5 dark:shadow-zinc-950">
-                                                <span className="text-foreground text-sm">Sining, Musika, Tula, atbp.</span>
+                                                <span className="text-foreground text-sm">Get MEDiated</span>
                                                 <span className="dark:border-background block h-4 w-0.5 border-l bg-white dark:bg-zinc-700"></span>
 
                                                 <div className="bg-background group-hover:bg-muted size-6 overflow-hidden rounded-full duration-500">
@@ -144,7 +144,7 @@ export default function HeroSection() {
                                     speedSegment={0.3}
                                     as="h1"
                                     className="mx-auto mt-8 max-w-4xl text-balance text-5xl max-md:font-semibold md:text-7xl lg:mt-16 xl:text-[5.25rem]">
-                                    This is where every masterpiece begins.
+                                    Your Digital Health Companion
                                 </TextEffect>
                                 <TextEffect
                                     per="line"
@@ -153,7 +153,7 @@ export default function HeroSection() {
                                     delay={0.5}
                                     as="p"
                                     className="mx-auto mt-8 max-w-2xl text-balance text-lg">
-                                    Every great work needs a starting point. Join our community of hobbyists and turn your personal passion into our shared inspiration.
+                                    Effortlessly match with verified specialists, consult securely online, and manage your complete medical history from one intuitive platform.
                                 </TextEffect>
 
                                 <AnimatedGroup
