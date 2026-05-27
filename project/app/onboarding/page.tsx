@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { currentUser } from '@clerk/nextjs/server';
-import { completePatientOnboarding, completeDoctorOnboarding } from './actions';
+import { completePatientOnboarding, completeDoctorOnboarding } from '@/lib/actions/onboarding';
 import OnboardingClientForm from '@/components/onboarding-client-form';
 
 export default async function OnboardingPage() {
