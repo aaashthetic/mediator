@@ -123,7 +123,7 @@ export default function HeroSection() {
                                         <Link
                                             href="/blogs"
                                             className="relative z-10 cursor-pointer hover:bg-background dark:hover:border-t-border bg-muted group mx-auto flex w-fit items-center gap-4 rounded-full border p-1 pl-4 shadow-md shadow-zinc-950/5 transition-colors duration-300 dark:border-t-white/5 dark:shadow-zinc-950">
-                                            <span className="text-foreground text-sm">Sining, Musika, Tula, atbp.</span>
+                                            <span className="text-foreground text-sm">Get Mediated</span>
                                             <span className="dark:border-background block h-4 w-0.5 border-l bg-white dark:bg-zinc-700"></span>
 
                                             <div className="bg-background group-hover:bg-muted size-6 overflow-hidden rounded-full duration-500">
