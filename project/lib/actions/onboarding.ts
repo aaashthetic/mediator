@@ -55,7 +55,7 @@ export async function completePatientOnboarding(formData: FormData) {
     }
   });
 
-  redirect('/dashboard');
+  return { success: true };
 }
 
 export async function completeDoctorOnboarding(formData: FormData) {
@@ -98,5 +98,5 @@ export async function completeDoctorOnboarding(formData: FormData) {
     }
   });
 
-  redirect('/dashboard');
+  return { success: true };
 }
