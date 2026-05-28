@@ -7,13 +7,12 @@ import { Loader2 } from 'lucide-react';
 
 interface FormProps {
   initialPhone: string;
-  patientAction: (formData: FormData) => Promise<{ success: boolean }>;
-  doctorAction: (formData: FormData) => Promise<{ success: boolean }>;
 }
 
-export default function OnboardingClientForm({ initialPhone, patientAction, doctorAction }: FormProps) {
+export default function OnboardingClientForm({ initialPhone }: FormProps) {
   const [role, setRole] = useState<'doctor' | 'patient' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   
   const router = useRouter();
   const { user, isLoaded } = useUser();
@@ -24,30 +23,46 @@ export default function OnboardingClientForm({ initialPhone, patientAction, doct
     if (isSubmitting) return;
 
     setIsSubmitting(true);
+    setApiError(null);
+
     const formData = new FormData(e.currentTarget);
+    const rawData = Object.fromEntries(formData.entries());
+
+    const endpoint = currentRole === 'patient' 
+      ? await '/api/onboarding/patient'
+      : await '/api/onboarding/doctor';
 
     try {
-      // Fire the Server Action and wait for DB/Clerk updates to complete
-      const response = currentRole === 'patient' 
-        ? await patientAction(formData) 
-        : await doctorAction(formData);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(rawData),
+      });
 
-      if (response.success) {
-        // Force Clerk to update browser session cookie token
-        if (isLoaded && user) {
-          await user.reload();
-        }
+      const data = await response.json();
 
-        // Navigate safely to the dashboard entry root
-        router.push('/dashboard');
-        router.refresh();
+      if (!response.ok) {
+        throw new Error(data.error || 'Onboarding registration failed.');
       }
-    } catch (err) {
+
+      // Force Clerk to update browser session cookie token
+      if (isLoaded && user) {
+        await user.reload();
+      }
+
+      // Navigate safely to the dashboard entry root
+      router.push('/dashboard');
+      router.refresh();
+
+    } catch (err: any) {
       console.error("Submission failed:", err);
+      setApiError(err.message || 'An unexpected runtime connection error occurred.');
       setIsSubmitting(false);
     }
   };
-
+  
   // Choose Role View
   if (!role) {
     return (
