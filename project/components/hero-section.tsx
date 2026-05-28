@@ -100,7 +100,7 @@ export default function HeroSection() {
                             <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
                                 <AnimatedGroup variants={{ item: itemVariants }}>
                                     <Show when="signed-out">
-                                        <SignUpButton mode="modal" forceRedirectUrl="/blogs">
+                                        <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
                                             <button className="relative z-10 cursor-pointer hover:bg-background dark:hover:border-t-border bg-muted group mx-auto flex w-fit items-center gap-4 rounded-full border p-1 pl-4 shadow-md shadow-zinc-950/5 transition-colors duration-300 dark:border-t-white/5 dark:shadow-zinc-950">
                                                 <span className="text-foreground text-sm">Get MEDiated</span>
                                                 <span className="dark:border-background block h-4 w-0.5 border-l bg-white dark:bg-zinc-700"></span>
