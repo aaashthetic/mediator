@@ -6,18 +6,18 @@ import Link from 'next/link';
 import { DoctorDirectory } from '@/components/doctor-directory';
 
 export default async function PatientHub({ userId }: { userId: string }) {
-  // Fetch real appointments from the database matching your schema relations
+  // Fetch appointments from db
   const patientAppointments = await db.query.appointments.findMany({
     where: eq(appointments.patientId, userId),
     limit: 3,
     orderBy: [desc(appointments.createdAt)],
     with: { 
       doctor: true,
-      schedule: true // Pulling the slot times as well
+      schedule: true
     }
   });
 
-  // Fetch verified doctors directly from your PG schema table
+  // Fetch verified doctors from db
   const verifiedDoctors = await db.query.doctors.findMany({
     where: eq(doctorsTable.isVerified, true),
     orderBy: [desc(doctorsTable.lastName)]
@@ -26,29 +26,29 @@ export default async function PatientHub({ userId }: { userId: string }) {
   return (
     <div className="space-y-8 p-6 max-w-7xl mx-auto animate-in fade-in duration-300">
       {/* Welcome Banner */}
-      <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl text-white shadow-md">
+      <div className="p-6 bg-gradient-to-r from-primary to-primary/70 rounded-2xl text-primary-foreground shadow-md animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
         <h1 className="text-2xl font-bold">Welcome back to MEDiator!</h1>
-        <p className="mt-1 text-blue-100 text-sm">Your health profile is active. Book consultations or review your clinical records below.</p>
+        <p className="mt-1 opacity-90 text-sm">Discover medical professionals, book consultations, and manage your health journey.</p>
       </div>
 
       {/* Grid Layout Summary Items */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 fill-mode-backwards">
         {/* Quick Actions Card */}
-        <div className="bg-card text-card-foreground border p-6 rounded-xl space-y-4 shadow-sm">
+        <div className="bg-card text-card-foreground border p-6 rounded-xl space-y-4 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
           <h2 className="font-semibold text-foreground flex items-center gap-2">
             <HeartPulse className="text-primary h-5 w-5" /> Quick Actions
           </h2>
           <div className="flex flex-col gap-2">
-            <Link href="/dashboard/patient/appointments" className="w-full text-center py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition shadow-sm">
+            <Link href="/dashboard/patient/appointments" className="w-full text-center py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition shadow-sm active:scale-[0.98]">
               Book Appointment Slot
             </Link>
-            <Link href="/dashboard/patient/records" className="w-full text-center py-2 bg-muted text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/80 border transition">
+            <Link href="/dashboard/patient/records" className="w-full text-center py-2 bg-muted text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/80 border transition active:scale-[0.98]">
               View History Notes
             </Link>
           </div>
         </div>
 
-        {/* Dynamic Appointments Queue matching your status enum mapping */}
+        {/* Dynamic Appointments Queue */}
         <div className="md:col-span-2 bg-card text-card-foreground border p-6 rounded-xl shadow-sm">
           <h2 className="font-semibold text-foreground flex items-center gap-2 mb-4">
             <Calendar className="text-primary h-5 w-5" /> Upcoming Consultations
@@ -60,8 +60,8 @@ export default async function PatientHub({ userId }: { userId: string }) {
             </p>
           ) : (
             <div className="space-y-3">
-              {patientAppointments.map((apt) => (
-                <div key={apt.id} className="flex justify-between items-center p-3 bg-muted/40 rounded-lg border">
+              {patientAppointments.map((apt, index) => (
+                <div key={apt.id} className="flex justify-between items-center p-3 bg-muted/40 rounded-lg border" style={{ animationDelay: `${index * 75}ms` }}>
                   <div>
                     <p className="text-sm font-semibold text-foreground">
                       Dr. {apt.doctor.firstName} {apt.doctor.lastName}
@@ -93,7 +93,7 @@ export default async function PatientHub({ userId }: { userId: string }) {
 
       <hr className="border-border" />
 
-      {/* Directory Section passing database entities */}
+      {/* Directory Section */}
       <div className="space-y-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground">Medical Practitioners Directory</h2>

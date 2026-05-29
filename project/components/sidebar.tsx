@@ -74,8 +74,7 @@ export function Sidebar() {
 
       <div className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 bg-background transform transition-all duration-300 ease-in-out lg:translate-x-0 px-3 flex flex-col h-full",
-          "shadow-[4px_0_24px_-12px_rgba(168,85,247,0.2)]",
-          "dark:shadow-[4px_0_24px_-12px_rgba(168,85,247,0.3)]",
+          "shadow-xl dark:shadow-2xl",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -109,8 +108,8 @@ export function Sidebar() {
                       <div 
                         className={cn(
                           "absolute left-0 w-[4px] h-8 rounded-r-full",
-                          "bg-gradient-to-b from-primary via-primary to-primary/40",
-                          "shadow-[2px_0_15px_rgba(168,85,247,0.6)]",
+                          "bg-gradient-to-b from-primary to-primary/40",
+                          "shadow-md",
                           "animate-in fade-in slide-in-from-left-2 duration-500"
                         )} 
                       />
@@ -163,7 +162,7 @@ export function Sidebar() {
             )}
           <div className="h-6 w-[1px] bg-border mx-1 hidden sm:block" />
           <ThemeToggle />
-          <div className="flex items-center p-0.5 rounded-full border border-primary/10 shadow-[0_0_10px_rgba(168,85,247,0.1)]">
+          <div className="flex items-center p-0.5 rounded-full border border-primary/10 shadow-md">
               <UserButton />
            </div>
           </div>

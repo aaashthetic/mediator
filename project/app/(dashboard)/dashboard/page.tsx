@@ -2,8 +2,8 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { TrendingUp, Users, CheckCircle, Clock, Plus, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import PatientHub from './patient/page';
-import DoctorHub from './doctor/page';
+import PatientHub from '@/patient/page';
+import DoctorHub from '@/doctor/page';
 
 export default async function DashboardPage() {
   const { userId } = await auth();
