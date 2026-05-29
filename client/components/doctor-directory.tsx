@@ -5,6 +5,7 @@ import { Search, Filter, ArrowUpDown, X, Stethoscope } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DoctorCard } from "@/components/doctor-card";
+import { useAuth } from "@clerk/nextjs";
 
 export function DoctorDirectory({ initialDoctors = [] }: { initialDoctors: any[] }) {
   const [doctors, setDoctors] = useState<any[]>(Array.isArray(initialDoctors) ? initialDoctors : []);
@@ -12,6 +13,8 @@ export function DoctorDirectory({ initialDoctors = [] }: { initialDoctors: any[]
   const [specialtyFilter, setSpecialtyFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name-asc");
   const [loading, setLoading] = useState(false);
+
+  const { getToken } = useAuth();
 
   useEffect(() => {
     setDoctors(Array.isArray(initialDoctors) ? initialDoctors : []);
@@ -27,12 +30,22 @@ export function DoctorDirectory({ initialDoctors = [] }: { initialDoctors: any[]
     const fetchFilteredDoctors = async () => {
       setLoading(true);
       try {
+        const token = await getToken();
+        if (!token) return;
+
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
         const queryParams = new URLSearchParams({
           search: searchQuery,
           specialization: specialtyFilter
         });
         
-        const response = await fetch(`/api/dashboard/patient?${queryParams.toString()}`);
+        const response = await fetch(`${apiBaseUrl}/api/doctors?${queryParams.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
         if (response.ok) {
           const data = await response.json();
           setDoctors(data.doctors || []);

@@ -10,30 +10,36 @@ interface DoctorPageProps {
 
 export default async function DoctorProfilePage({ params }: DoctorPageProps) {
   const { docId } = await params;
-  const { userId: patientClerkId } = await auth();
+  const { userId: patientClerkId, getToken } = await auth();
 
   // Route security check
-  if (!patientClerkId) notFound();
+  if (!patientClerkId) {
+    console.error("Clerk Authentication failed: No active session found.");
+    notFound();
+  }
 
   // Retrieve hydrated and calculated data from the endpoint
   let doctorDetails = null;
 
   try {
-    const host = (await headers()).get("host");
-    const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-    
-    const response = await fetch(`${protocol}://${host}/api/dashboard/patient/${docId}`, {
-      headers: await headers(), // Forwards authentication headers/cookies seamlessly
-      next: { revalidate: 0 }    // Keeps data real-time for booking accuracy
-    });
+    const token = await getToken();
 
-    if (response.status === 404) {
-      notFound();
-    }
+    if (token) {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      console.log(`📡 Server Fetching Doctor ID: ${docId} from ${apiBaseUrl}/api/doctors/${docId}`);
+      const response = await fetch(`${apiBaseUrl}/api/doctors/${docId}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        next: { revalidate: 0 }, // Ensure live real-time schedule slot updates
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      doctorDetails = data.doctor;
+      if (response.ok) {
+        const data = await response.json();
+        doctorDetails = data.doctor;
+      }
     }
   } catch (error) {
     console.error("Failed to hydrate page from doctor profile API:", error);
@@ -79,7 +85,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Consultation Rate</span>
               <div className="mt-1 flex items-baseline gap-1">
-                <span className="text-3xl font-black text-foreground">₱{doctorDetails.price.toFixed(2)}</span>
+                <span className="text-3xl font-black text-foreground">₱{doctorDetails.consultationFee.toFixed(2)}</span>
                 <span className="text-xs text-muted-foreground">/ session</span>
               </div>
               <div className="h-[1px] bg-border/60 my-4" />

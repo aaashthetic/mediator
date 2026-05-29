@@ -22,8 +22,8 @@ export function DoctorProfileHeader({ doctor }: { doctor: any }) {
         <div className="relative h-32 w-32 rounded-full p-1 border-2 border-primary/40 bg-background shadow-xl mb-4">
           <div className="relative w-full h-full rounded-full overflow-hidden">
             <Image 
-              src={doctor.avatarUrl} 
-              alt={doctor.name}
+              src={doctor.profilePicture} 
+              alt={`Dr. ${doctor.lastName}`}
               fill
               className="object-cover"
               priority
@@ -35,7 +35,7 @@ export function DoctorProfileHeader({ doctor }: { doctor: any }) {
 
         {/* Identity Context Fields */}
         <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-          {doctor.name}
+          Dr. {doctor.firstName} {doctor.lastName}
         </h1>
 
         <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 shadow-sm">

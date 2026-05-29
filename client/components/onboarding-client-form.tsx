@@ -28,30 +28,67 @@ export default function OnboardingClientForm({ initialPhone }: FormProps) {
     const formData = new FormData(e.currentTarget);
     const rawData = Object.fromEntries(formData.entries());
 
+    // Point directly to  Express server's base URL
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     const endpoint = currentRole === 'patient' 
-      ? await '/api/onboarding/patient'
-      : await '/api/onboarding/doctor';
+      ? `${apiBaseUrl}/api/onboarding/patient`
+      : `${apiBaseUrl}/api/onboarding/doctor`;
 
     try {
+      // Grab the raw session JWT from Clerk
+      if (!isLoaded || !user) {
+        throw new Error("User session is not fully loaded yet.");
+      }
+      
+      // This fetches the active backend session token synchronously or via cache
+      const token = await window.Clerk?.session?.getToken();
+      
+      if (!token) {
+        throw new Error("Authentication token could not be generated.");
+      }
+
+      // Fire the request directly to Express with the validation token
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // Injected for backend getAuth(req) parsing
         },
         body: JSON.stringify(rawData),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const contentType = response.headers.get("content-type");
+        
+        // If the server crashed and sent an HTML page, read it as plain text
+        if (contentType && contentType.includes("text/html")) {
+          const htmlError = await response.text();
+          console.error("Backend Server HTML Crash Log:", htmlError);
+          throw new Error(`Backend Server Error (Status ${response.status}). Check your terminal console!`);
+        }
+
+        // Otherwise, safely parse your standard JSON errors
+        const data = await response.json();
         throw new Error(data.error || 'Onboarding registration failed.');
       }
 
-      // Force Clerk to update browser session cookie token
-      if (isLoaded && user) {
-        await user.reload();
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Catch Zod middleware errors from your Express backend
+        if (data.details) {
+          const structuralErrors = Object.entries(data.details)
+            .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+            .join(' | ');
+          throw new Error(structuralErrors || 'Validation failed.');
+        }
+        throw new Error(data.error || 'Onboarding registration failed.');
       }
 
+      // Force Clerk to update browser session cookie tokens to see new publicMetadata roles
+      await user.reload();
+
+      // Success redirect
       window.location.href = '/dashboard';
 
     } catch (err: any) {
