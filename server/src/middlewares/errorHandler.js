@@ -1,4 +1,4 @@
-import { doctorSchema, patientSchema } from "./validations.js";
+import { doctorSchema, patientSchema, bookAppointmentSchema } from "./validations.js";
 
 // Middleware to intercept and validate Doctor payload
 export function validateDoctor(req, res, next) {
@@ -20,6 +20,22 @@ export function validateDoctor(req, res, next) {
 // Middleware to intercept and validate Patient payload
 export function validatePatient(req, res, next) {
   const result = patientSchema.safeParse(req.body);
+  
+  if (!result.success) {
+    return res.status(400).json({ 
+      status: 400,
+      error: "Validation failed", 
+      details: result.error.flatten().fieldErrors 
+    });
+  }
+  
+  // Attach sanitized data to request object for the controller
+  req.validatedBody = result.data;
+  next();
+}
+
+export function validateAppointment(req, res, next) {
+  const result = bookAppointmentSchema.safeParse(req.body);
   
   if (!result.success) {
     return res.status(400).json({ 

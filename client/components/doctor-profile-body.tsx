@@ -2,12 +2,15 @@
 
 import { BookingModal } from "@/components/modals/booking-modal";
 import { Sparkles, ShieldCheck, Clock } from "lucide-react";
+import { useState } from "react";
 
 interface DoctorProfileBodyProps {
   doctor: any;
 }
 
 export function DoctorProfileBody({ doctor }: DoctorProfileBodyProps) {
+  const [bookingVersion, setBookingVersion] = useState(0);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-10 pt-4">
       
@@ -67,7 +70,11 @@ export function DoctorProfileBody({ doctor }: DoctorProfileBodyProps) {
 
           {/* Client-Side Booking Action Hook Trigger */}
           <div className="pt-2">
-            <BookingModal doctor={doctor} />
+            <BookingModal 
+                key={`${doctor.id}-${bookingVersion}`} 
+                doctor={doctor} 
+                onSuccess={() => setBookingVersion(prev => prev + 1)} 
+            />
           </div>
         </div>
       </div>

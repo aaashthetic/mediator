@@ -1,20 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquare, Video, Calendar, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { MessageSquare, Video, Calendar, CreditCard, ChevronRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Step = "SERVICE" | "SCHEDULE" | "PAYMENT" | "SUCCESS";
 
-export function BookingModal({ doctor }: { doctor: any }) {
+interface BookingModalProps {
+  doctor: any;
+  onSuccess?: () => void;
+}
+
+export function BookingModal({ doctor, onSuccess }: BookingModalProps) {
+  const { getToken } = useAuth();
+  const router = useRouter();
+
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("SERVICE");
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"gcash" | "maya" | "card" | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const resetFlow = () => {
     setStep("SERVICE");
@@ -22,18 +33,60 @@ export function BookingModal({ doctor }: { doctor: any }) {
     setSelectedSlot(null);
     setPaymentMethod(null);
     setIsProcessing(false);
+    setErrorMessage(null);
   };
 
-  // Mock Payment Integration Handler triggering specific local states 
   const handlePaymentExecution = async () => {
-    if (!paymentMethod) return;
+    if (!paymentMethod || !selectedSlot) return;
     setIsProcessing(true);
+    setErrorMessage(null);
     
-    // Simulating external web-hook checkout callbacks redirect latencies
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    setIsProcessing(false);
-    setStep("SUCCESS");
+    try {
+      // Fetch active session token from Clerk JWT cache
+      const token = await getToken();
+      if (!token) {
+        throw new Error("Authentication session has expired. Please re-login.");
+      }
+
+      // Point to  designated Express port environment variable 
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+      const response = await fetch(`${apiBaseUrl}/api/appointments`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          doctorId: doctor.id,
+          scheduleId: selectedSlot.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "An unexpected reservation break occurred.");
+      }
+
+      router.refresh(); 
+      if (onSuccess) onSuccess();
+      
+      setStep("SUCCESS");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to finalize connection pipeline.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getStepDescription = () => {
+    switch (step) {
+      case "SERVICE": return "Select your preferred consultation channel to connect with your practitioner.";
+      case "SCHEDULE": return "Choose an available date and time slot that fits your schedule.";
+      case "PAYMENT": return "Review your appointment breakdown and select a secure payment method.";
+      default: return "";
+    }
   };
 
   return (
@@ -46,15 +99,21 @@ export function BookingModal({ doctor }: { doctor: any }) {
       
       <DialogContent className="sm:max-w-md border border-border/80 shadow-2xl p-6">
         <DialogHeader className="text-left pb-2 border-b border-border/60">
-          <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-            <span>Consultation Intake Engine</span>
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
-            {step !== "SUCCESS" && `Step progressing: ${step} verification setup`}
-          </DialogDescription>
+          <DialogTitle className="text-lg font-bold text-foreground">Book Consultation</DialogTitle>
+          {step !== "SUCCESS" && (
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              {getStepDescription()}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        {/* SERVICE SELECTION PROFILE */}
+        {errorMessage && (
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs mt-3 animate-in fade-in duration-150">
+            <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+            <span className="font-medium">{errorMessage}</span>
+          </div>
+        )}
+
         {step === "SERVICE" && (
           <div className="space-y-4 py-4 animate-in fade-in duration-200">
             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Channel Modality</label>
@@ -90,20 +149,17 @@ export function BookingModal({ doctor }: { doctor: any }) {
           </div>
         )}
 
-        {/* REAL-TIME TIMELINE SCHEDULE SLOT SELECTION */}
         {step === "SCHEDULE" && (
           <div className="space-y-4 py-4 animate-in fade-in duration-200">
             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Available Appointment Time</label>
             <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
-              {doctor.availableSlots.map((slot: any) => (
+              {doctor.availableSlots?.map((slot: any) => (
                 <button
                   key={slot.id}
                   onClick={() => setSelectedSlot(slot)}
                   className={cn(
                     "p-3 text-center rounded-xl border transition-all text-xs flex flex-col gap-1 items-center font-medium",
-                    selectedSlot?.id === slot.id
-                      ? "border-primary bg-primary/10 text-primary font-bold shadow-sm"
-                      : "border-muted-foreground/20 hover:border-muted-foreground/40 text-foreground bg-muted/5"
+                    selectedSlot?.id === slot.id ? "border-primary bg-primary/10 text-primary font-bold shadow-sm" : "border-muted-foreground/20 hover:border-muted-foreground/40 text-foreground bg-muted/5"
                   )}
                 >
                   <Calendar size={14} className="opacity-70" />
@@ -115,31 +171,29 @@ export function BookingModal({ doctor }: { doctor: any }) {
 
             <div className="flex gap-2 pt-4 border-t border-border/60">
               <Button variant="outline" size="sm" onClick={() => setStep("SERVICE")} className="flex-1 rounded-xl text-xs font-bold uppercase tracking-wider">Back</Button>
-              <Button 
-                size="sm" 
-                disabled={!selectedSlot} 
-                onClick={() => setStep("PAYMENT")}
-                className="flex-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-primary"
-              >
-                Continue
-              </Button>
+              <Button size="sm" disabled={!selectedSlot} onClick={() => setStep("PAYMENT")} className="flex-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-primary">Continue</Button>
             </div>
           </div>
         )}
 
-        {/* PAYMENT GATEWAY SIMULATOR */}
         {step === "PAYMENT" && (
           <div className="space-y-4 py-4 animate-in fade-in duration-200">
             <div className="rounded-xl bg-muted/20 border p-3 text-xs space-y-1 text-muted-foreground">
-              <div className="flex justify-between font-medium"><span className="capitalize">{selectedService} Telehealth Consultation</span><span className="font-bold text-foreground">₱{doctor.price.toFixed(2)}</span></div>
-              <div className="flex justify-between text-[11px]"><span>Scheduled Slot</span><span className="text-foreground font-medium">{selectedSlot?.date} @ {selectedSlot?.time}</span></div>
+              <div className="flex justify-between font-medium">
+                <span className="capitalize">{selectedService} Telehealth Consultation</span>
+                <span className="font-bold text-foreground">₱{Number(doctor.consultationFee || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span>Scheduled Slot</span>
+                <span className="text-foreground font-medium">{selectedSlot?.date} @ {selectedSlot?.time}</span>
+              </div>
             </div>
 
             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mt-2">Select Payment Endpoint</label>
             <div className="grid grid-cols-1 gap-2">
               {[
                 { id: "gcash", name: "GCash Smart Wallet", description: "Direct checkout verification portal" },
-                { id: "maya", name: "Maya Wallet Core", description: "Secure instantaneous mobile remittance" },
+                { id: "maya", name: "Maya Wallet", description: "Secure instantaneous mobile remittance" },
                 { id: "card", name: "Credit / Debit Card", description: "Visa, Mastercard via payment engine link" }
               ].map((method) => (
                 <button
@@ -148,9 +202,7 @@ export function BookingModal({ doctor }: { doctor: any }) {
                   onClick={() => setPaymentMethod(method.id as any)}
                   className={cn(
                     "flex items-center justify-between p-3.5 rounded-xl border text-left transition-all",
-                    paymentMethod === method.id 
-                      ? "border-primary bg-primary/5 text-primary font-bold shadow-sm" 
-                      : "border-muted-foreground/20 hover:border-muted-foreground/40 text-foreground"
+                    paymentMethod === method.id ? "border-primary bg-primary/5 text-primary font-bold shadow-sm" : "border-muted-foreground/20 hover:border-muted-foreground/40 text-foreground"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -178,14 +230,13 @@ export function BookingModal({ doctor }: { doctor: any }) {
                 {isProcessing ? (
                   <span className="flex items-center gap-1"><Loader2 size={14} className="animate-spin" /> Authorizing...</span>
                 ) : (
-                  `Pay ₱${doctor.price.toFixed(2)}`
+                  `Pay ₱${Number(doctor.consultationFee || 0).toFixed(2)}`
                 )}
               </Button>
             </div>
           </div>
         )}
 
-        {/* CONFIRMATION STATE WINDOW */}
         {step === "SUCCESS" && (
           <div className="text-center py-6 space-y-4 animate-in scale-in duration-300">
             <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
@@ -205,10 +256,7 @@ export function BookingModal({ doctor }: { doctor: any }) {
             </div>
 
             <div className="pt-2">
-              <Button 
-                onClick={() => { setOpen(false); resetFlow(); }} 
-                className="w-full max-w-xs rounded-xl text-xs font-bold uppercase tracking-wider bg-primary h-10"
-              >
+              <Button onClick={() => { setOpen(false); resetFlow(); }} className="w-full max-w-xs rounded-xl text-xs font-bold uppercase tracking-wider bg-primary h-10">
                 Return to Directory
               </Button>
             </div>
