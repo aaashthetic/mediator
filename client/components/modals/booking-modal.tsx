@@ -60,6 +60,8 @@ export function BookingModal({ doctor, onSuccess }: BookingModalProps) {
         body: JSON.stringify({
           doctorId: doctor.id,
           scheduleId: selectedSlot.id,
+          modality: selectedService, 
+          paymentMethod: paymentMethod,
         }),
       });
 
@@ -71,7 +73,7 @@ export function BookingModal({ doctor, onSuccess }: BookingModalProps) {
 
       router.refresh(); 
       if (onSuccess) onSuccess();
-      
+
       setStep("SUCCESS");
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to finalize connection pipeline.");

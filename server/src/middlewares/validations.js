@@ -95,6 +95,12 @@ export const createScheduleSchema = z.object({
 export const bookAppointmentSchema = z.object({
     doctorId: z.string().min(1, 'Doctor selection is required'),
     scheduleId: z.string().uuid('Invalid schedule identifier'),
+    modality: z.enum(['chat', 'video'], { message: 'Invalid consultation modality' }),
+    paymentMethod: z.enum(['gcash', 'maya', 'card'], { message: 'Invalid payment method' }),
+});
+
+export const rescheduleAppointmentSchema = z.object({
+    scheduleId: z.string().uuid('Invalid schedule identifier'),
 });
 
 

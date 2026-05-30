@@ -7,8 +7,28 @@ import { DoctorDirectory } from '@/components/doctor-directory';
 import { headers } from 'next/headers';
 import { auth } from '@clerk/nextjs/server';
 
+interface Doctor {
+  firstName: string;
+  lastName: string;
+  specialization: string;
+}
+
+interface Schedule {
+  startTime: string;
+  endTime: string;
+  date?: string;
+  time?: string;
+}
+
+interface Appointment {
+  id: string | number;
+  status: string;
+  doctor?: Doctor;
+  schedule?: Schedule;
+}
+
 export default async function PatientHub() {
-  let patientAppointments = [];
+  let patientAppointments: Appointment[] = [];
   let verifiedDoctors = [];
 
   try {
@@ -19,15 +39,19 @@ export default async function PatientHub() {
     if (userId && token) {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
   
-      patientAppointments = await db.query.appointments.findMany({
-        where: eq(appointments.patientId, userId),
-        limit: 3,
-        orderBy: [desc(appointments.createdAt)],
-        with: { 
-          doctor: true,
-          schedule: true
-        }
+      const appointmentsResponse = await fetch(`${apiBaseUrl}/api/appointments?role=patient&userId=${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        next: { revalidate: 0 }
       });
+
+      if (appointmentsResponse.ok) {
+        const appointmentData = await appointmentsResponse.json();
+        patientAppointments = (appointmentData.appointments || [])
+          .filter((apt: Appointment) => apt.status === 'confirmed')
+          .slice(0, 3);
+      }
     
       // Fetch verified doctors from API route
       const response = await fetch(`${apiBaseUrl}/api/doctors`, {
@@ -72,7 +96,7 @@ export default async function PatientHub() {
         </div>
 
         {/* Dynamic Appointments Queue */}
-        <div className="md:col-span-2 bg-card text-card-foreground border p-6 rounded-xl shadow-sm">
+        <div className="md:col-span-2 bg-card text-card-foreground border p-6 rounded-xl shadow-sm flex flex-col h-[180px]">
           <h2 className="font-semibold text-foreground flex items-center gap-2 mb-4">
             <Calendar className="text-primary h-5 w-5" /> Upcoming Consultations
           </h2>
@@ -82,19 +106,19 @@ export default async function PatientHub() {
               No active appointments scheduled. Need a checkup?
             </p>
           ) : (
-            <div className="space-y-3">
-              {patientAppointments.map((apt, index) => (
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+              {patientAppointments.map((apt: Appointment, index: number) => (
                 <div key={apt.id} className="flex justify-between items-center p-3 bg-muted/40 rounded-lg border" style={{ animationDelay: `${index * 75}ms` }}>
                   <div>
                     <p className="text-sm font-semibold text-foreground">
-                      Dr. {apt.doctor.firstName} {apt.doctor.lastName}
+                      Dr. {apt.doctor?.firstName} {apt.doctor?.lastName}
                     </p>
                     <p className="text-xs text-muted-foreground capitalize">
-                      Specialty: {apt.doctor.specialization}
+                      Specialization: {apt.doctor?.specialization}
                     </p>
                     {apt.schedule && (
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {new Date(apt.schedule.startTime).toLocaleDateString()} @ {new Date(apt.schedule.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(apt.schedule.startTime).toLocaleDateString()} @ {new Date(apt.schedule.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     )}
                   </div>

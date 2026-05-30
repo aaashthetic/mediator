@@ -1,6 +1,6 @@
 {
-  "id": "f3310d8e-e6e6-4e4f-8fc4-5221f952376d",
-  "prevId": "23278ae7-fa07-4a6a-a0bd-847495262e90",
+  "id": "16d0e434-3b06-437f-a52b-db9d8ad1fee9",
+  "prevId": "f3310d8e-e6e6-4e4f-8fc4-5221f952376d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -41,6 +41,21 @@
           "notNull": true,
           "default": "'pending'"
         },
+        "modality": {
+          "name": "modality",
+          "type": "modality",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'video'"
+        },
+        "payment_method": {
+          "name": "payment_method",
+          "type": "payment_method",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
         "room_url": {
           "name": "room_url",
           "type": "text",
@@ -49,14 +64,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -129,13 +144,13 @@
         },
         "start_time": {
           "name": "start_time",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "end_time": {
           "name": "end_time",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -247,20 +262,20 @@
         },
         "medical_practice_start_date": {
           "name": "medical_practice_start_date",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -333,7 +348,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -426,7 +441,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -516,14 +531,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -550,12 +565,29 @@
         "completed"
       ]
     },
+    "public.modality": {
+      "name": "modality",
+      "schema": "public",
+      "values": [
+        "chat",
+        "video"
+      ]
+    },
     "public.notification_status": {
       "name": "notification_status",
       "schema": "public",
       "values": [
         "unread",
         "read"
+      ]
+    },
+    "public.payment_method": {
+      "name": "payment_method",
+      "schema": "public",
+      "values": [
+        "gcash",
+        "maya",
+        "card"
       ]
     },
     "public.user_role": {
