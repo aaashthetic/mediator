@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning={true}>
-        <body className={poppins.className}>
+        <body className={poppins.className} suppressHydrationWarning={true}>
           <main>
               {children}
           </main>

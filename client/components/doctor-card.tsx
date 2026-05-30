@@ -26,6 +26,7 @@ export function DoctorCard({ doctor }: { doctor: any }) {
                         alt={`Dr. ${doctor.lastName}`}
                         fill
                         className="object-cover"
+                        sizes="(max-width: 768px) 56px, 112px"
                         />
                     </div>
                 <div className="flex-1 min-w-0">

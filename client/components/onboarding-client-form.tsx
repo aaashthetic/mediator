@@ -31,8 +31,8 @@ export default function OnboardingClientForm({ initialPhone }: FormProps) {
     // Point directly to  Express server's base URL
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     const endpoint = currentRole === 'patient' 
-      ? `${apiBaseUrl}/api/onboarding/patient`
-      : `${apiBaseUrl}/api/onboarding/doctor`;
+      ? `${apiBaseUrl}/api/patients`
+      : `${apiBaseUrl}/api/doctors`;
 
     try {
       // Grab the raw session JWT from Clerk

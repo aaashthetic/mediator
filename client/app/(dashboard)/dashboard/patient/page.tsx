@@ -29,6 +29,7 @@ export default async function PatientHub() {
         }
       });
     
+      // Fetch verified doctors from API route
       const response = await fetch(`${apiBaseUrl}/api/doctors`, {
         headers: {
           'Authorization': `Bearer ${token}`

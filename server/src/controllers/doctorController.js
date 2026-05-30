@@ -39,7 +39,7 @@ export const getAllDoctors = async (req, res, next) => {
       yearsOfExperience: computeExperience(doctor.medicalPracticeStartDate),
     }));
 
-    return res.status(200).json({ doctors: formattedDoctors });
+    return res.status(200).json({ doctors: doctorsList });
   } catch (error) {
     next(error);
   }
@@ -74,7 +74,7 @@ export const getDoctorById = async (req, res, next) => {
       return res.status(404).json({ error: "Doctor profile not found" });
     }
 
-    const doctorRecord = rows[0].doctor;
+    const doc = rows[0].doctor;
 
     const availableSlots = rows
       .filter(row => row.schedule !== null)
@@ -89,13 +89,13 @@ export const getDoctorById = async (req, res, next) => {
 
     // Assemble custom UI component signature state payload
     const doctorDetails = {
-      ...doctorRecord,
-      firstName: doctor.firstName,
-      lastName: doctor.lastName,
-      profilePicture: doctor.profilePicture || "/placeholder-avatar.png",
-      bio: doctor.bio ||  "No clinical biography provided.",
-      consultationFee: Number(doctor.consultationFee || 0),
-      yearsOfExperience: computeExperience(doctor.medicalPracticeStartDate),
+      ...doc,
+      firstName: doc.firstName,
+      lastName: doc.lastName,
+      profilePicture: doc.profilePicture || "/placeholder-avatar.png",
+      bio: doc.bio ||  "No clinical biography provided.",
+      consultationFee: Number(doc.consultationFee || 0),
+      yearsOfExperience: computeExperience(doc.medicalPracticeStartDate),
       services: DEFAULT_SERVICES,
       availableSlots,
     };
