@@ -85,11 +85,12 @@ export default function OnboardingClientForm({ initialPhone }: FormProps) {
         throw new Error(data.error || 'Onboarding registration failed.');
       }
 
-      // Force Clerk to update browser session cookie tokens to see new publicMetadata roles
-      await user.reload();
-
-      // Success redirect
-      window.location.href = '/dashboard';
+      // Success redirect directly to doctor dashboard (metadata sync can be delayed)
+      if (currentRole === 'doctor') {
+        window.location.href = '/dashboard/doctor';
+      } else {
+        window.location.href = '/dashboard/patient';
+      }
 
     } catch (err: any) {
       console.error("Submission failed:", err);

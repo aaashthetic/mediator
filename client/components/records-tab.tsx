@@ -45,6 +45,12 @@ export function RecordsTab({ appointments }: RecordsTabProps) {
                 <div>
                   <CardTitle className="text-sm font-black text-foreground">Dr. {doctorName}</CardTitle>
                   <p className="text-[11px] text-muted-foreground font-medium">{apt.doctor?.specialization || "General Practice"}</p>
+                  {apt.medicalRecord?.createdAt && (
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      <span className="font-medium">Published:</span>{' '}
+                      {new Date(apt.medicalRecord.createdAt).toLocaleString()}
+                    </p>
+                  )}
                 </div>
               </div>
 

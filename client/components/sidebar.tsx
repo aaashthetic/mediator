@@ -40,28 +40,18 @@ export function Sidebar() {
 
   if (isLoaded && user) {
     if (role === 'doctor') {
-      // If the doctor is verified, grant full clinical console features
-      if (isVerified) {
-        navigation = [
-          { name: "Dashboard", href: "/dashboard/doctor", icon: Home },
-          { name: "Schedule", href: "/dashboard/doctor/schedule", icon: Calendar },
-          { name: "Patient Records", href: "/dashboard/doctor/patients", icon: ClipboardList },
-          { name: "Doctor Profile", href: "/dashboard/doctor/profile", icon: Stethoscope },
-          { name: "Settings", href: "/settings", icon: Settings },
-        ]
-      } else {
-        // If doctor is unverified, completely lock paths to prevent middleware loops
-        navigation = [
-          { name: "Verification Pending", href: "/onboarding/pending", icon: ShieldAlert },
-        ]
-      }
+      navigation = [
+        { name: "Dashboard", href: "/dashboard/doctor", icon: Home },
+        { name: "Schedule", href: "/dashboard/doctor/schedule", icon: Calendar },
+        { name: "Appointments", href: "/dashboard/doctor/appointments", icon: ClipboardList },
+        { name: "Doctor Profile", href: "/dashboard/doctor/profile", icon: Stethoscope },
+      ]
     } else if (role === 'patient') {
       navigation = [
         { name: "Dashboard", href: "/dashboard/patient", icon: Home },
         { name: "Appointments", href: "/dashboard/patient/appointments", icon: Calendar },
         { name: "Medical History", href: "/dashboard/patient/records", icon: Activity },
         { name: "Patient Profile", href: "/dashboard/patient/profile", icon: User },
-        { name: "Settings", href: "/settings", icon: Settings },
       ]
     }
   }
@@ -125,14 +115,9 @@ export function Sidebar() {
             <div className="px-7 flex flex-col items-center justify-center w-full text-center gap-2 animate-in fade-in duration-300">
               <div className="flex justify-center">
                 {role === 'doctor' ? (
-                  <span className={cn(
-                    "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xxs font-bold uppercase tracking-wider border shadow-sm",
-                    isVerified 
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
-                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                  )}>
-                    {isVerified ? <BadgeCheck size={11} /> : <ShieldAlert size={12} />}
-                    {isVerified ? "MD Verified" : "MD Pending"}
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xxs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm">
+                    <Stethoscope size={12} />
+                    Doctor
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-bold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-sm">

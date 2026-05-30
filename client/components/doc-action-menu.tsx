@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-export function ActionMenu({ appointment }: { appointment: any }) {
+export function DocActionMenu({ appointment }: { appointment: any }) {
   const { getToken } = useAuth();
   const router = useRouter();
   
@@ -134,7 +134,7 @@ export function ActionMenu({ appointment }: { appointment: any }) {
             <div className="p-2 rounded-lg bg-destructive/10 text-destructive"><AlertTriangle size={16} /></div>
             <DialogTitle className="text-sm font-bold">Cancel Consultation Session?</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground leading-normal">
-              Are you sure you want to cancel your session with Dr. {appointment.doctor?.firstName}? This action will immediately release the slot lock reservation.
+              Are you sure you want to cancel this session? This action will immediately release the slot lock reservation.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-1.5 sm:gap-0 pt-1.5">
