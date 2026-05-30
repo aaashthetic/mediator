@@ -5,51 +5,22 @@ import { Search, Filter, ArrowUpDown, X, Stethoscope } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DoctorCard } from "@/components/doctor-card";
+import { useAuth } from "@clerk/nextjs";
 
 export function DoctorDirectory({ initialDoctors = [] }: { initialDoctors: any[] }) {
-  const [doctors, setDoctors] = useState<any[]>(Array.isArray(initialDoctors) ? initialDoctors : []);
+  const safeInitial = Array.isArray(initialDoctors) ? initialDoctors : [];
   const [searchQuery, setSearchQuery] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name-asc");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setDoctors(Array.isArray(initialDoctors) ? initialDoctors : []);
-  }, [initialDoctors]);
+  const { getToken } = useAuth();
+
+  const uniqueSpecialties = Array.from(
+    new Set(safeInitial.map((d) => d?.specialization).filter(Boolean))
+  ) as string[];
   
-  useEffect(() => {
-    // Avoid double fetching on initial mount if filters are blank
-    if (searchQuery === "" && specialtyFilter === "all") {
-      setDoctors(Array.isArray(initialDoctors) ? initialDoctors : []);
-      return;
-    }
-
-    const fetchFilteredDoctors = async () => {
-      setLoading(true);
-      try {
-        const queryParams = new URLSearchParams({
-          search: searchQuery,
-          specialization: specialtyFilter
-        });
-        
-        const response = await fetch(`/api/dashboard/patient?${queryParams.toString()}`);
-        if (response.ok) {
-          const data = await response.json();
-          setDoctors(data.doctors || []);
-        }
-      } catch (err) {
-        console.error("Error updating directory lists:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const timer = setTimeout(fetchFilteredDoctors, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery, specialtyFilter, initialDoctors]);
-
-  // Filter Logic matching string properties
-  const processedDoctors = (doctors || [])
+  const processedDoctors = safeInitial
     .filter((doc) => {
       if (!doc) return false;
 
@@ -60,6 +31,7 @@ export function DoctorDirectory({ initialDoctors = [] }: { initialDoctors: any[]
 
       const matchesSearch = 
         `${firstName} ${lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        specialization.toLowerCase().includes(searchQuery.toLowerCase()) ||
         bio.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesSpecialty = 
@@ -76,11 +48,6 @@ export function DoctorDirectory({ initialDoctors = [] }: { initialDoctors: any[]
       if (sortBy === "name-desc") return nameB.localeCompare(nameA);
       return 0;
     });
-
-  // Safe array extraction layout tracking for specialties dropdown values mapping
-  const uniqueSpecialties = Array.from(
-    new Set((doctors || []).map((d) => d?.specialization).filter(Boolean))
-  ) as string[];
 
   const hasFiltersApplied = searchQuery !== "" || specialtyFilter !== "all" || sortBy !== "name-asc";
 
@@ -149,7 +116,7 @@ export function DoctorDirectory({ initialDoctors = [] }: { initialDoctors: any[]
           )}
         </div>
         <div>
-          Showing {processedDoctors.length} of {doctors.length} practioners
+          Showing {processedDoctors.length} of {safeInitial.length} practioners
         </div>
       </div>
 

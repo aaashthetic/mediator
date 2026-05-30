@@ -5,34 +5,42 @@ import { Calendar, HeartPulse } from 'lucide-react';
 import Link from 'next/link';
 import { DoctorDirectory } from '@/components/doctor-directory';
 import { headers } from 'next/headers';
+import { auth } from '@clerk/nextjs/server';
 
-export default async function PatientHub({ userId }: { userId: string }) {
-  // Fetch appointments from db
-  const patientAppointments = await db.query.appointments.findMany({
-    where: eq(appointments.patientId, userId),
-    limit: 3,
-    orderBy: [desc(appointments.createdAt)],
-    with: { 
-      doctor: true,
-      schedule: true
-    }
-  });
-
-  // Fetch verified doctors from db
+export default async function PatientHub() {
+  let patientAppointments = [];
   let verifiedDoctors = [];
+
   try {
     // Forward headers/cookies so auth() inside the API route can verify who is logged in
-    const host = (await headers()).get('host');
-    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
-    
-    const response = await fetch(`${protocol}://${host}/api/dashboard/patient`, {
-      headers: await headers(), // Forwards authentication cookies natively
-      next: { revalidate: 0 }    // Keeps data real-time, avoids aggressive builds caching
-    });
+    const { userId, getToken } = await auth();
+    const token = await getToken();
 
-    if (response.ok) {
-      const data = await response.json();
-      verifiedDoctors = data.doctors || [];
+    if (userId && token) {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+  
+      patientAppointments = await db.query.appointments.findMany({
+        where: eq(appointments.patientId, userId),
+        limit: 3,
+        orderBy: [desc(appointments.createdAt)],
+        with: { 
+          doctor: true,
+          schedule: true
+        }
+      });
+    
+      // Fetch verified doctors from API route
+      const response = await fetch(`${apiBaseUrl}/api/doctors`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        next: { revalidate: 0 }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        verifiedDoctors = data.doctors || [];
+      }
     }
   } catch (error) {
     console.error("Failed to hydrate directory from API route:", error);
