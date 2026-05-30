@@ -8,8 +8,8 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 import { sql } from 'drizzle-orm';
 import { db } from './src/config/db.js';
 import { clerkMiddleware } from '@clerk/express';
-import onboardingRouter from './src/routes/onboardingRouter.js';
 import doctorRouter from './src/routes/doctorRouter.js';
+import patientRouter from './src/routes/patientRouter.js';
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -43,8 +43,8 @@ app.get("/api/test-db", async (req, res) => {
     }
 });
 
-app.use("/api/onboarding", onboardingRouter);
 app.use("/api/doctors", doctorRouter);
+app.use("/api/patients", patientRouter);
 
 app.get("/api/home", (req, res) => {
     res.json({ message: "Welcome to the Mediator API!" });

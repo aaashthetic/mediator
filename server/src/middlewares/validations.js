@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // PATIENT VALIDATION SCHEMAS
-export const patientOnboardingSchema = z.object({
+export const patientSchema = z.object({
     firstName: z
         .string()
         .min(1, 'First name is required')
@@ -39,13 +39,13 @@ export const patientOnboardingSchema = z.object({
 });
 
 // Full database row validation including the primary key string
-export const patientDbSchema = patientOnboardingSchema.extend({
+export const patientDbSchema = patientSchema.extend({
     id: z.string().min(1, 'Clerk user ID is required'),
 });
 
 
 // DOCTOR VALIDATION SCHEMAS
-export const doctorOnboardingSchema = z.object({
+export const doctorSchema = z.object({
     firstName: z
         .string()
         .min(1, 'First name is required')
@@ -75,7 +75,7 @@ export const doctorOnboardingSchema = z.object({
         }),
 });
 
-export const doctorDbSchema = doctorOnboardingSchema.extend({
+export const doctorDbSchema = doctorSchema.extend({
     id: z.string().min(1, 'Clerk user ID is required'),
     isVerified: z.boolean().default(false),
     createdAt: z.date().optional(),

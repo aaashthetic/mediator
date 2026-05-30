@@ -1,8 +1,8 @@
-import { doctorOnboardingSchema, patientOnboardingSchema } from "../validations.js";
+import { doctorSchema, patientSchema } from "./validations.js";
 
 // Middleware to intercept and validate Doctor payload
-export function validateDoctorOnboarding(req, res, next) {
-  const result = doctorOnboardingSchema.safeParse(req.body);
+export function validateDoctor(req, res, next) {
+  const result = doctorSchema.safeParse(req.body);
   
   if (!result.success) {
     return res.status(400).json({ 
@@ -18,8 +18,8 @@ export function validateDoctorOnboarding(req, res, next) {
 }
 
 // Middleware to intercept and validate Patient payload
-export function validatePatientOnboarding(req, res, next) {
-  const result = patientOnboardingSchema.safeParse(req.body);
+export function validatePatient(req, res, next) {
+  const result = patientSchema.safeParse(req.body);
   
   if (!result.success) {
     return res.status(400).json({ 
