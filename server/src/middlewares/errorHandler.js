@@ -1,4 +1,4 @@
-import { doctorSchema, patientSchema, bookAppointmentSchema, rescheduleAppointmentSchema, patientDocumentSchema } from "./validations.js";
+import { doctorSchema, patientSchema, bookAppointmentSchema, rescheduleAppointmentSchema, patientDocumentSchema, doctorUpdateSchema, patientUpdateSchema } from "./validations.js";
 
 // Middleware to intercept and validate Doctor payload
 export function validateDoctor(req, res, next) {
@@ -85,3 +85,26 @@ export const validateDocument = (schema) => {
     next();
   };
 };
+
+// 🩺 New: Middleware to validate Doctor Profile Updates (Partial)
+export function validateDoctorUpdate(req, res, next) {
+  const result = doctorUpdateSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ 
+      status: 400, error: "Validation failed", details: result.error.flatten().fieldErrors 
+    });
+  }
+  req.validatedBody = result.data;
+  next();
+}
+
+export function validatePatientUpdate(req, res, next) {
+  const result = patientUpdateSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ 
+      status: 400, error: "Validation failed", details: result.error.flatten().fieldErrors 
+    });
+  }
+  req.validatedBody = result.data;
+  next();
+}

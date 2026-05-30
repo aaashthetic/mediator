@@ -151,19 +151,55 @@ export async function createPatient(req, res, next) {
       basicMedicalHistory: basicMedicalHistory || null,
     });
 
-    // Concurrently handle all mutations hitting remote Clerk infrastructure via unified thread groups
-    await Promise.all([
-      clerkClient.users.updateUser(userId, { firstName, lastName }),
-      clerkClient.users.updateUserMetadata(userId, {
-        publicMetadata: {
-          role: "patient",
-          onboardingComplete: true
-        }
-      })
-    ]);
+    await clerkClient.users.updateUser(userId, {
+      publicMetadata: {
+        onboardingComplete: true,
+        role: 'patient',
+      }
+    });
 
     return res.status(200).json({ success: true, message: "Patient profile onboarded successfully" });
   } catch (error) {
     next(error); 
   }
 }
+
+export async function updatePatient(req, res, next) {
+  try {
+    const { userId } = getAuth(req);
+     
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized access token" });
+    }
+
+    // Extract fields safe to update from the validation middleware wrapper
+    const { firstName, lastName, birthday, weight, height, phone, basicMedicalHistory } = req.validatedBody;
+
+    const updateValues = {};
+    if (firstName !== undefined) updateValues.firstName = firstName;
+    if (lastName !== undefined) updateValues.lastName = lastName;
+    if (phone !== undefined) updateValues.phone = phone;
+    if (basicMedicalHistory !== undefined) updateValues.basicMedicalHistory = basicMedicalHistory;
+    if (birthday !== undefined) updateValues.birthday = new Date(birthday).toISOString().split('T')[0];
+    if (weight !== undefined) updateValues.weight = Number(weight).toFixed(2);
+    if (height !== undefined) updateValues.height = Number(height).toFixed(2);
+
+    if (Object.keys(updateValues).length === 0) {
+      return res.status(400).json({ error: "No valid changes found in request body" });
+    }
+
+    // Direct update query restricted down to the authenticated patient's ID row
+    await db
+      .update(patients)
+      .set(updateValues)
+      .where(eq(patients.id, userId));
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "Patient profile updated successfully" 
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-// PATIENT VALIDATION SCHEMAS
+// ==========================================
+// 🩹 PATIENT VALIDATION SCHEMAS
+// ==========================================
 export const patientSchema = z.object({
     firstName: z
         .string()
@@ -14,22 +16,17 @@ export const patientSchema = z.object({
         .string()
         .min(1, 'Birthday is required')
         .refine((val) => !isNaN(Date.parse(val)), {
-        message: 'Invalid date format',
+            message: 'Invalid date format',
         }),
-    weight: z
-        .string()
-        .min(1, 'Weight is required')
-        .transform((val) => parseFloat(val))
-        .refine((val) => val > 0 && val < 500, {
-        message: 'Weight must be a valid number between 0 and 500 kg',
-        }),
-    height: z
-        .string()
-        .min(1, 'Height is required')
-        .transform((val) => parseFloat(val))
-        .refine((val) => val > 0 && val < 300, {
-        message: 'Height must be a valid number between 0 and 300 cm',
-        }),
+    // 💡 Coerce handles both raw form string data or pre-parsed numbers from your client cleanly
+    weight: z.coerce
+        .number({ invalid_type_error: 'Weight must be a valid number' })
+        .min(0.1, 'Weight must be greater than 0')
+        .max(500, 'Weight must be under 500 kg'),
+    height: z.coerce
+        .number({ invalid_type_error: 'Height must be a valid number' })
+        .min(0.1, 'Height must be greater than 0')
+        .max(300, 'Height must be under 300 cm'),
     profilePicture: z.string().url('Invalid image URL').optional().or(z.literal('')),
     phone: z
         .string()
@@ -44,7 +41,9 @@ export const patientDbSchema = patientSchema.extend({
 });
 
 
-// DOCTOR VALIDATION SCHEMAS
+// ==========================================
+// 🩺 DOCTOR VALIDATION SCHEMAS
+// ==========================================
 export const doctorSchema = z.object({
     firstName: z
         .string()
@@ -83,7 +82,9 @@ export const doctorDbSchema = doctorSchema.extend({
 });
 
 
-// APPOINTMENT & SCHEDULE SCHEMAS
+// ==========================================
+// 📅 APPOINTMENT & SCHEDULE SCHEMAS
+// ==========================================
 export const createScheduleSchema = z.object({
     startTime: z.string().datetime({ message: "Invalid ISO datetime string" }),
     endTime: z.string().datetime({ message: "Invalid ISO datetime string" }),
@@ -104,7 +105,9 @@ export const rescheduleAppointmentSchema = z.object({
 });
 
 
-// CONSULTATION & MEDICAL RECORDS SCHEMA
+// ==========================================
+// 📝 CONSULTATION & MEDICAL RECORDS SCHEMA
+// ==========================================
 export const medicalRecordFormSchema = z.object({
     consultationNotes: z
         .string()
@@ -114,7 +117,9 @@ export const medicalRecordFormSchema = z.object({
 });
 
 
-// FILE UPLOADS
+// ==========================================
+// 📂 FILE UPLOADS & DOCUMENTS
+// ==========================================
 export const patientDocumentSchema = z.object({
     patientId: z.string().min(1, 'Patient context identity token is required'),
     fileUrl: z.string().url('Invalid asset download URL link format'),
@@ -132,3 +137,11 @@ export const patientDocumentDbSchema = patientDocumentSchema.extend({
     id: z.string().uuid('Invalid metadata record tracking UUID'),
     createdAt: z.union([z.date(), z.string()]).optional(),
 });
+
+
+// ==========================================
+// 🔄 PROFILE UPDATE OVERRIDES (PARTIAL)
+// ==========================================
+// Using .partial() now functions perfectly because base types evaluate accurately
+export const doctorUpdateSchema = doctorSchema.partial();
+export const patientUpdateSchema = patientSchema.partial();

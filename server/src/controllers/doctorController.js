@@ -1,5 +1,6 @@
 import { db } from '../config/db.js';
 import { doctors, doctorSchedules } from '../db/schema.js';
+import { getAuth, clerkClient } from '@clerk/express';
 import { eq, and, asc } from 'drizzle-orm';
 
 // Helper function to calculate experience dynamically
@@ -132,21 +133,54 @@ export async function createDoctor(req, res, next) {
       consultationFee: Number(consultationFee).toFixed(2),
       medicalPracticeStartDate: new Date(medicalPracticeStartDate),
     });
-
-    // Update remote profiles in Clerk
-    await Promise.all([
-      clerkClient.users.updateUser(userId, { firstName, lastName }),
-      clerkClient.users.updateUserMetadata(userId, {
-        publicMetadata: {
-          role: "doctor",
-          onboardingComplete: true,
-          doctorVerified: false,
-          specialization,
-        }
-      })
-    ]);
+    
+    await clerkClient.users.updateUser(userId, {
+      publicMetadata: {
+        onboardingComplete: true,
+        role: 'doctor',
+      }
+    });
 
     return res.status(200).json({ success: true, message: "Doctor onboarded successfully" });
+  } catch (error) {
+    next(error); 
+  }
+}
+
+export async function updateDoctor(req, res, next) {
+  try {
+    const { userId } = getAuth(req);
+     
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized access token" });
+    }
+
+    // Capture the payload from your validation middleware
+    const { firstName, lastName, specialization, bio, consultationFee, medicalPracticeStartDate } = req.validatedBody;
+
+    // Build the dynamic update payload
+    const updateValues = {};
+    if (firstName !== undefined) updateValues.firstName = firstName;
+    if (lastName !== undefined) updateValues.lastName = lastName;
+    if (specialization !== undefined) updateValues.specialization = specialization;
+    if (bio !== undefined) updateValues.bio = bio;
+    if (consultationFee !== undefined) updateValues.consultationFee = Number(consultationFee).toFixed(2);
+    if (medicalPracticeStartDate !== undefined) updateValues.medicalPracticeStartDate = new Date(medicalPracticeStartDate);
+
+    if (Object.keys(updateValues).length === 0) {
+      return res.status(400).json({ error: "No update fields provided" });
+    }
+
+    // Execute update statement matching the user's Clerk ID
+    const result = await db
+      .update(doctors)
+      .set(updateValues)
+      .where(eq(doctors.id, userId));
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "Doctor profile updated successfully" 
+    });
   } catch (error) {
     next(error); 
   }
