@@ -1,6 +1,6 @@
 import { db } from '../config/db.js';
 import { appointments, doctorSchedules, patients, doctors, medicalRecords } from '../db/schema.js';
-import { eq, and, desc, count } from 'drizzle-orm';
+import { eq, and, desc, count, gt } from 'drizzle-orm';
 
 // Helper function to format readable slot arrays from schedule join fields
 const formatAppointmentSlot = (startTimeString, endTimeString) => {
@@ -31,8 +31,6 @@ export const getAppointments = async (req, res, next) => {
       return res.status(400).json({ error: "Missing identity scoping parameters ()role & userId" });
     }
 
-    console.log("QUERY USER:", userId);
-
     // Construct conditional filters array matching relational parameters
     const conditions = [];
     if (role === 'patient') {
@@ -54,11 +52,13 @@ export const getAppointments = async (req, res, next) => {
         patient: patients,
         doctor: doctors,
         schedule: doctorSchedules,
+        medicalRecord: medicalRecords,
       })
       .from(appointments)
       .leftJoin(patients, eq(appointments.patientId, patients.id))
       .leftJoin(doctors, eq(appointments.doctorId, doctors.id))
       .leftJoin(doctorSchedules, eq(appointments.scheduleId, doctorSchedules.id))
+      .leftJoin(medicalRecords, eq(appointments.id, medicalRecords.appointmentId))
       .where(whereClause)
       .limit(Number(limit))
       .offset(offset)
@@ -92,6 +92,12 @@ export const getAppointments = async (req, res, next) => {
           specialization: row.doctor.specialization,
           profilePicture: row.doctor.profilePicture || "/placeholder-avatar.png",
           consultationFee: Number(row.doctor.consultationFee || 0),
+        } : null,
+        medicalRecord: row.medicalRecord ? {
+          id: row.medicalRecord.id,
+          consultationNotes: row.medicalRecord.consultationNotes,
+          prescriptions: row.medicalRecord.prescriptions || "",
+          createdAt: row.medicalRecord.createdAt,
         } : null,
         schedule: row.schedule ? {
           id: row.schedule.id,
@@ -147,6 +153,28 @@ export const getAppointmentById = async (req, res, next) => {
     const targetRow = rows[0];
     const slotInfo = formatAppointmentSlot(targetRow.schedule?.startTime);
 
+    // Fetch available slots for the doctor if present
+    let availableSlots = [];
+    if (targetRow.doctor) {
+      const futureSlots = await db
+        .select()
+        .from(doctorSchedules)
+        .where(and(
+          eq(doctorSchedules.doctorId, targetRow.doctor.id),
+          eq(doctorSchedules.isBooked, false)
+        ))
+        .orderBy(doctorSchedules.startTime);
+
+      availableSlots = futureSlots.map((slot) => ({
+        id: slot.id,
+        date: new Date(slot.startTime).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
+        time: new Date(slot.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        isBooked: slot.isBooked,
+        rawStartTime: slot.startTime,
+        rawEndTime: slot.endTime,
+      }));
+    }
+
     // Assemble unified UI layout payload contract
     const appointmentDetails = {
       id: targetRow.appointment.id,
@@ -174,6 +202,7 @@ export const getAppointmentById = async (req, res, next) => {
         specialization: targetRow.doctor.specialization,
         profilePicture: targetRow.doctor.profilePicture || "/placeholder-avatar.png",
         consultationFee: Number(targetRow.doctor.consultationFee || 0),
+        availableSlots: availableSlots,
       } : null,
       schedule: targetRow.schedule ? {
         id: targetRow.schedule.id,
@@ -274,9 +303,9 @@ export const createAppointment = async (req, res, next) => {
 export const rescheduleAppointment = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { newScheduleId } = req.body;
+    const { scheduleId } = req.body;  // Changed from newScheduleId to match frontend
 
-    if (!id || !newScheduleId) {
+    if (!id || !scheduleId) {
       return res.status(400).json({ error: "Missing appointment ID or new schedule slot identifier" });
     }
 
@@ -296,7 +325,7 @@ export const rescheduleAppointment = async (req, res, next) => {
       }
 
       // If they are trying to move to the same slot, exit early
-      if (currentAppointment.scheduleId === newScheduleId) {
+      if (currentAppointment.scheduleId === scheduleId) {
         return currentAppointment;
       }
 
@@ -306,7 +335,7 @@ export const rescheduleAppointment = async (req, res, next) => {
         .from(doctorSchedules)
         .where(
           and(
-            eq(doctorSchedules.id, newScheduleId),
+            eq(doctorSchedules.id, scheduleId),
             eq(doctorSchedules.doctorId, currentAppointment.doctorId)
           )
         );
@@ -329,13 +358,13 @@ export const rescheduleAppointment = async (req, res, next) => {
       await tx
         .update(doctorSchedules)
         .set({ isBooked: true })
-        .where(eq(doctorSchedules.id, newScheduleId));
+        .where(eq(doctorSchedules.id, scheduleId));
 
       // Update the appointment record
       const [updated] = await tx
         .update(appointments)
         .set({
-          scheduleId: newScheduleId,
+          scheduleId: scheduleId,
           status: 'confirmed', // Reset status if it was pending
           updatedAt: new Date(),
         })
@@ -469,6 +498,73 @@ export const deleteAppointment = async (req, res, next) => {
     if (error.message === "APPOINTMENT_NOT_FOUND") {
       return res.status(404).json({ error: "The requested appointment record does not exist" });
     }
+    next(error);
+  }
+};
+
+// Save or update consultation notes for an appointment (doctor-only)
+export const saveConsultationNotes = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const doctorId = req.userId;
+    const { consultationNotes, prescriptions } = req.body || {};
+
+    if (!id) {
+      return res.status(400).json({ error: "Missing appointment identifier" });
+    }
+
+    if (!doctorId) {
+      return res.status(401).json({ error: "Unauthorized access" });
+    }
+
+    if (!consultationNotes) {
+      return res.status(400).json({ error: "consultationNotes is required" });
+    }
+
+    // Verify appointment exists and that the requesting doctor owns it
+    const [appointmentRow] = await db
+      .select()
+      .from(appointments)
+      .where(eq(appointments.id, id));
+
+    if (!appointmentRow) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    if (appointmentRow.doctorId !== doctorId) {
+      return res.status(403).json({ error: "Forbidden: you are not the owner of this appointment" });
+    }
+
+    // Check for existing medical record for this appointment
+    const [existingRecord] = await db
+      .select()
+      .from(medicalRecords)
+      .where(eq(medicalRecords.appointmentId, id));
+
+    if (existingRecord) {
+      const [updated] = await db
+        .update(medicalRecords)
+        .set({ consultationNotes, prescriptions })
+        .where(eq(medicalRecords.id, existingRecord.id))
+        .returning();
+
+      return res.status(200).json({ success: true, medicalRecord: updated });
+    }
+
+    // Create new medical record
+    const [inserted] = await db
+      .insert(medicalRecords)
+      .values({
+        appointmentId: id,
+        patientId: appointmentRow.patientId,
+        doctorId: doctorId,
+        consultationNotes,
+        prescriptions: prescriptions || "",
+      })
+      .returning();
+
+    return res.status(201).json({ success: true, medicalRecord: inserted });
+  } catch (error) {
     next(error);
   }
 };

@@ -11,6 +11,8 @@ import { clerkMiddleware } from '@clerk/express';
 import doctorRouter from './src/routes/doctorRouter.js';
 import patientRouter from './src/routes/patientRouter.js';
 import appointmentRouter from './src/routes/appointmentRouter.js';
+import patientDocumentRouter from './src/routes/patientDocumentRouter.js';
+import scheduleRouter from './src/routes/scheduleRouter.js';
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -19,7 +21,9 @@ const port = process.env.PORT || 8080;
 app.use(express.json());
 app.use(cors({ 
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    credentials: true 
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(clerkMiddleware());
 
@@ -49,7 +53,8 @@ app.use(clerkMiddleware());
 app.use("/api/doctors", doctorRouter);
 app.use("/api/patients", patientRouter);
 app.use("/api/appointments", appointmentRouter);
-
+app.use("/api/documents", patientDocumentRouter);
+app.use("/api/schedule", scheduleRouter);
 app.get("/api/home", (req, res) => {
     res.json({ message: "Welcome to the Mediator API!" });
 });

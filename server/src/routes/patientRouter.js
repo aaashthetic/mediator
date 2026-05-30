@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { getAllPatients, getPatientById, createPatient } from '../controllers/patientController.js';
-import { validatePatient } from '../middlewares/errorHandler.js';
+import { updatePatient, getAllPatients, getPatientById, createPatient } from '../controllers/patientController.js';
+import { validatePatient, validatePatientUpdate } from '../middlewares/errorHandler.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 const router = Router();
@@ -13,5 +13,7 @@ router.get('/:patientId', requireAuth, getPatientById);
 
 // POST /api/patients - Create new patient profile (onboarding) - protected route
 router.post("/", validatePatient, createPatient);
+
+router.put("/", requireAuth, validatePatientUpdate, updatePatient);
 
 export default router;

@@ -1,6 +1,4 @@
-import { db } from '@/lib/db';
 import { eq, desc, and } from 'drizzle-orm';
-import { appointments, doctors as doctorsTable } from '@/lib/db/schema';
 import { Calendar, HeartPulse } from 'lucide-react';
 import Link from 'next/link';
 import { DoctorDirectory } from '@/components/doctor-directory';
