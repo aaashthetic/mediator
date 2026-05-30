@@ -11,6 +11,7 @@ import { clerkMiddleware } from '@clerk/express';
 import doctorRouter from './src/routes/doctorRouter.js';
 import patientRouter from './src/routes/patientRouter.js';
 import appointmentRouter from './src/routes/appointmentRouter.js';
+import patientDocumentRouter from './src/routes/patientDocumentRouter.js';
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -49,7 +50,7 @@ app.use(clerkMiddleware());
 app.use("/api/doctors", doctorRouter);
 app.use("/api/patients", patientRouter);
 app.use("/api/appointments", appointmentRouter);
-
+app.use("/api/documents", patientDocumentRouter);
 app.get("/api/home", (req, res) => {
     res.json({ message: "Welcome to the Mediator API!" });
 });

@@ -14,13 +14,12 @@ export default async function MedicalRecordsPage() {
     notFound();
   }
 
-  let records = [];
+  let documents = [];
   const token = await getToken();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
   try {
-    // Reusing your scoping logic to get appointment metadata containing medical records
-    const response = await fetch(`${apiBaseUrl}/api/appointments?role=patient&userId=${userId}`, {
+    const documentRes = await fetch(`${apiBaseUrl}/api/documents?role=patient&userId=${userId}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -28,9 +27,9 @@ export default async function MedicalRecordsPage() {
       },
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      records = data.appointments || [];
+    if (documentRes.ok) {
+      const data = await documentRes.json();
+      documents = data.documents || [];
     }
   } catch (error) {
     console.error("Failed to hydrate medical database engine records:", error);
@@ -64,11 +63,11 @@ export default async function MedicalRecordsPage() {
         </TabsList>
 
         <TabsContent value="clinical" className="outline-none w-full">
-          <RecordsTab appointments={records} />
+          <RecordsTab appointments={documents} />
         </TabsContent>
 
         <TabsContent value="documents" className="outline-none w-full">
-          <UploadsTab userId={userId} token={token} apiBaseUrl={apiBaseUrl} />
+          <UploadsTab userId={userId} apiBaseUrl={apiBaseUrl} initialDocuments={documents}/>
         </TabsContent>
       </Tabs>
     </div>

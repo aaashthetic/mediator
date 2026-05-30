@@ -112,3 +112,23 @@ export const medicalRecordFormSchema = z.object({
         .max(5000),
     prescriptions: z.string().optional().or(z.literal('')),
 });
+
+
+// FILE UPLOADS
+export const patientDocumentSchema = z.object({
+    patientId: z.string().min(1, 'Patient context identity token is required'),
+    fileUrl: z.string().url('Invalid asset download URL link format'),
+    fileName: z
+        .string()
+        .min(1, 'File name is required')
+        .max(255, 'File name description is too long'),
+    fileSize: z
+        .string()
+        .max(50, 'File footprint value payload is too long')
+        .default('Unknown Size'),
+});
+
+export const patientDocumentDbSchema = patientDocumentSchema.extend({
+    id: z.string().uuid('Invalid metadata record tracking UUID'),
+    createdAt: z.union([z.date(), z.string()]).optional(),
+});

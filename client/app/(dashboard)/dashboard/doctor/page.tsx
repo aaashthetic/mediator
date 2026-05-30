@@ -1,5 +1,5 @@
-import { db } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+
+/* import { eq } from 'drizzle-orm';
 import { appointments, doctors } from '@/lib/db/schema';
 import { Users, Clock, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
@@ -18,7 +18,7 @@ export default async function DoctorHub({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-8">
-      {/* Clinical Metrics Block */}
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 p-5 rounded-xl flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Users className="h-6 w-6" /></div>
@@ -49,7 +49,6 @@ export default async function DoctorHub({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {/* Main Worklist */}
       <div className="bg-white border border-slate-200 rounded-xl p-6">
         <h2 className="font-bold text-slate-900 text-lg mb-4">Today's Consultation Schedule Queue</h2>
         {activeSchedules.length === 0 ? (
@@ -87,4 +86,4 @@ export default async function DoctorHub({ userId }: { userId: string }) {
       </div>
     </div>
   );
-}
+} */
