@@ -4,6 +4,8 @@ import { relations } from 'drizzle-orm';
 export const roleEnum = pgEnum('user_role', ['patient', 'doctor', 'admin']);
 export const appointmentStatusEnum = pgEnum('appointment_status', ['pending', 'confirmed', 'rescheduled', 'cancelled', 'completed']);
 export const notificationStatusEnum = pgEnum('notification_status', ['unread', 'read']);
+export const paymentMethodEnum = pgEnum('payment_method', ['gcash', 'maya', 'card']);
+export const modalityEnum = pgEnum('modality', ['chat', 'video']);
 
 
 // PATIENTS TABLE
@@ -67,6 +69,8 @@ export const appointments = pgTable('appointments', {
     .references(() => doctorSchedules.id)
     .notNull(),
   status: appointmentStatusEnum('status').default('pending').notNull(),
+  modality: modalityEnum('modality').default('video').notNull(),
+  paymentMethod: paymentMethodEnum('payment_method').notNull(),
   roomUrl: text('room_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -87,6 +91,15 @@ export const medicalRecords = pgTable('medical_records', {
   consultationNotes: text('consultation_notes').notNull(),
   prescriptions: text('prescriptions'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const patientDocuments = pgTable('patient_documents', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  patientId: text('patient_id').notNull(), 
+  fileUrl: text('file_url').notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileSize: varchar('file_size', { length: 50 }), 
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 

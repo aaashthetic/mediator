@@ -1,4 +1,4 @@
-import { doctorSchema, patientSchema, bookAppointmentSchema } from "./validations.js";
+import { doctorSchema, patientSchema, bookAppointmentSchema, rescheduleAppointmentSchema } from "./validations.js";
 
 // Middleware to intercept and validate Doctor payload
 export function validateDoctor(req, res, next) {
@@ -49,3 +49,21 @@ export function validateAppointment(req, res, next) {
   req.validatedBody = result.data;
   next();
 }
+
+export const validateReschedule = (schema) => {
+  return (req, res, next) => {
+    const result = rescheduleAppointmentSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        status: 400,
+        error: "Validation failed", 
+        details: result.error.flatten().fieldErrors
+      });
+    }
+
+    // Pass the parsed, safe results forward
+    req.validatedBody = result.data;
+    next();
+  };
+};

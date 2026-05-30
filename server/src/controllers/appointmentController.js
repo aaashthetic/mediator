@@ -3,12 +3,21 @@ import { appointments, doctorSchedules, patients, doctors, medicalRecords } from
 import { eq, and, desc, count } from 'drizzle-orm';
 
 // Helper function to format readable slot arrays from schedule join fields
-const formatAppointmentSlot = (startTimeString) => {
-  if (!startTimeString) return { date: "N/A", time: "N/A" };
+const formatAppointmentSlot = (startTimeString, endTimeString) => {
+  if (!startTimeString) return { date: "N/A", startTime: "N/A", endTime: "N/A" };
   const start = new Date(startTimeString);
+  const formattedStart = start.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+  
+  let formattedEnd = "";
+  if (endTimeString) {
+    const end = new Date(endTimeString);
+    formattedEnd = end.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+  }
+  
   return {
     date: start.toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" }),
-    time: start.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    startTime: formattedStart,
+    endTime: formattedEnd,
   };
 };
 
@@ -21,6 +30,8 @@ export const getAppointments = async (req, res, next) => {
     if (!role || !userId) {
       return res.status(400).json({ error: "Missing identity scoping parameters ()role & userId" });
     }
+
+    console.log("QUERY USER:", userId);
 
     // Construct conditional filters array matching relational parameters
     const conditions = [];
@@ -60,10 +71,12 @@ export const getAppointments = async (req, res, next) => {
 
     // Map rows into tailored sub-object contracts for cleaner UI interpretation
     const appointmentList = rawRows.map((row) => {
-      const slotInfo = formatAppointmentSlot(row.schedule?.startTime);
+      const slotInfo = formatAppointmentSlot(row.schedule?.startTime, row.schedule?.endTime);
       return {
         id: row.appointment.id,
         status: row.appointment.status,
+        modality: row.appointment.modality,
+        paymentMethod: row.appointment.paymentMethod,
         roomUrl: row.appointment.roomUrl,
         createdAt: row.appointment.createdAt,
         patient: row.patient ? {
@@ -78,11 +91,13 @@ export const getAppointments = async (req, res, next) => {
           lastName: row.doctor.lastName,
           specialization: row.doctor.specialization,
           profilePicture: row.doctor.profilePicture || "/placeholder-avatar.png",
+          consultationFee: Number(row.doctor.consultationFee || 0),
         } : null,
         schedule: row.schedule ? {
           id: row.schedule.id,
           date: slotInfo.date,
-          time: slotInfo.time,
+          startTime: slotInfo.startTime,
+          endTime: slotInfo.endTime,
         } : null,
       };
     });
@@ -136,6 +151,8 @@ export const getAppointmentById = async (req, res, next) => {
     const appointmentDetails = {
       id: targetRow.appointment.id,
       status: targetRow.appointment.status,
+      modality: targetRow.appointment.modality,
+      paymentMethod: targetRow.appointment.paymentMethod,
       roomUrl: targetRow.appointment.roomUrl,
       createdAt: targetRow.appointment.createdAt,
       updatedAt: targetRow.appointment.updatedAt,
@@ -184,7 +201,8 @@ export const createAppointment = async (req, res, next) => {
     const patientId = req.userId;
     
     // Access validated schema parameters safely straight from middleware extensions
-    const { doctorId, scheduleId } = req.validatedBody;
+    const data = req.validatedBody || req.body;
+    const { doctorId, scheduleId, modality, paymentMethod } = data;
 
     if (!patientId) {
       return res.status(401).json({ error: "Unauthorized patient access credentials" });
@@ -225,6 +243,8 @@ export const createAppointment = async (req, res, next) => {
           patientId,
           doctorId,
           scheduleId,
+          modality,
+          paymentMethod,
           status: 'confirmed',
           roomUrl: null,
         })
@@ -245,6 +265,209 @@ export const createAppointment = async (req, res, next) => {
     }
     if (error.message === "SLOT_ALREADY_RESERVED") {
       return res.status(409).json({ error: "This consultation time window has already been reserved" });
+    }
+    next(error);
+  }
+};
+
+// Update appointment
+export const rescheduleAppointment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { newScheduleId } = req.body;
+
+    if (!id || !newScheduleId) {
+      return res.status(400).json({ error: "Missing appointment ID or new schedule slot identifier" });
+    }
+
+    const updatedAppointment = await db.transaction(async (tx) => {
+      // Fetch current appointment details to find the old schedule slot
+      const [currentAppointment] = await tx
+        .select()
+        .from(appointments)
+        .where(eq(appointments.id, id));
+
+      if (!currentAppointment) {
+        throw new Error("APPOINTMENT_NOT_FOUND");
+      }
+
+      if (currentAppointment.status === "cancelled") {
+        throw new Error("CANNOT_RESCHEDULE_CANCELLED");
+      }
+
+      // If they are trying to move to the same slot, exit early
+      if (currentAppointment.scheduleId === newScheduleId) {
+        return currentAppointment;
+      }
+
+      // Validate availability of the new slot
+      const [newSlot] = await tx
+        .select()
+        .from(doctorSchedules)
+        .where(
+          and(
+            eq(doctorSchedules.id, newScheduleId),
+            eq(doctorSchedules.doctorId, currentAppointment.doctorId)
+          )
+        );
+
+      if (!newSlot) {
+        throw new Error("NEW_SCHEDULE_NOT_FOUND");
+      }
+
+      if (newSlot.isBooked) {
+        throw new Error("NEW_SLOT_ALREADY_RESERVED");
+      }
+
+      // Free up the old slot
+      await tx
+        .update(doctorSchedules)
+        .set({ isBooked: false })
+        .where(eq(doctorSchedules.id, currentAppointment.scheduleId));
+
+      // Reserve the new slot
+      await tx
+        .update(doctorSchedules)
+        .set({ isBooked: true })
+        .where(eq(doctorSchedules.id, newScheduleId));
+
+      // Update the appointment record
+      const [updated] = await tx
+        .update(appointments)
+        .set({
+          scheduleId: newScheduleId,
+          status: 'confirmed', // Reset status if it was pending
+          updatedAt: new Date(),
+        })
+        .where(eq(appointments.id, id))
+        .returning();
+
+      return updated;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Appointment rescheduled successfully",
+      appointment: updatedAppointment,
+    });
+  } catch (error) {
+    if (error.message === "APPOINTMENT_NOT_FOUND") {
+      return res.status(404).json({ error: "The requested appointment record does not exist" });
+    }
+    if (error.message === "CANNOT_RESCHEDULE_CANCELLED") {
+      return res.status(400).json({ error: "Cancelled appointments cannot be rescheduled. Please book a new one." });
+    }
+    if (error.message === "NEW_SCHEDULE_NOT_FOUND") {
+      return res.status(404).json({ error: "The targeted schedule slot does not exist for this practitioner" });
+    }
+    if (error.message === "NEW_SLOT_ALREADY_RESERVED") {
+      return res.status(409).json({ error: "The targeted consultation window is already reserved" });
+    }
+    next(error);
+  }
+};
+
+export const cancelAppointment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: "Missing appointment identifier" });
+    }
+
+    const cancelledAppointment = await db.transaction(async (tx) => {
+      // Fetch current appointment details to lock down the bound schedule target
+      const [currentAppointment] = await tx
+        .select()
+        .from(appointments)
+        .where(eq(appointments.id, id));
+
+      if (!currentAppointment) {
+        throw new Error("APPOINTMENT_NOT_FOUND");
+      }
+
+      if (currentAppointment.status === "cancelled") {
+        return currentAppointment;
+      }
+
+      // Unlocks the practitioner's time window slot
+      await tx
+        .update(doctorSchedules)
+        .set({ isBooked: false })
+        .where(eq(doctorSchedules.id, currentAppointment.scheduleId));
+
+      // Mark the appointment status context as cancelled
+      const [updated] = await tx
+        .update(appointments)
+        .set({
+          status: 'cancelled',
+          updatedAt: new Date(),
+        })
+        .where(eq(appointments.id, id))
+        .returning();
+
+      return updated;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Appointment cancelled successfully, schedule window has been released",
+      appointment: cancelledAppointment,
+    });
+  } catch (error) {
+    if (error.message === "APPOINTMENT_NOT_FOUND") {
+      return res.status(404).json({ error: "The requested appointment record does not exist" });
+    }
+    next(error);
+  }
+};
+
+// Permanently delete an appointment row
+export const deleteAppointment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: "Missing appointment identifier" });
+    }
+
+    await db.transaction(async (tx) => {
+      // Fetch target appointment to check state before purging
+      const [currentAppointment] = await tx
+        .select()
+        .from(appointments)
+        .where(eq(appointments.id, id));
+
+      if (!currentAppointment) {
+        throw new Error("APPOINTMENT_NOT_FOUND");
+      }
+
+      // If the appointment wasn't already cancelled, liberate the schedule slot first
+      if (currentAppointment.status !== "cancelled") {
+        await tx
+          .update(doctorSchedules)
+          .set({ isBooked: false })
+          .where(eq(doctorSchedules.id, currentAppointment.scheduleId));
+      }
+
+      // Clean up associated medical records if your schema doesn't use ON DELETE CASCADE
+      await tx
+        .delete(medicalRecords)
+        .where(eq(medicalRecords.appointmentId, id));
+
+      // Remove the appointment record permanently
+      await tx
+        .delete(appointments)
+        .where(eq(appointments.id, id));
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Appointment record permanently purged from database references",
+    });
+  } catch (error) {
+    if (error.message === "APPOINTMENT_NOT_FOUND") {
+      return res.status(404).json({ error: "The requested appointment record does not exist" });
     }
     next(error);
   }
